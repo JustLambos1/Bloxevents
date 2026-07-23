@@ -50,7 +50,7 @@ function sendMessage() {
     // Replace this later with your AI response.
 }
 
-send.addEventListener("click", sendMessage);
+53: send.onclick = sendMessage;
 
 input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
