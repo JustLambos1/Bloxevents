@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>small leak</title>
+<link rel="icon" type="image/png" href="favicon-180.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --brown-deep:#2c1810;
+    --brown:#4a2c1a;
+    --brown-light:#6b3f22;
+    --saffron:#ff9933;
+    --white:#f5f0e6;
+    --green:#138808;
+    --chakra-blue:#1a2a6c;
+    --wrong-red:#c0392b;
+    --claimed-green:#2e7d32;
+  }
+
+  * { box-sizing: border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(ellipse at top, rgba(255,153,51,0.08), transparent 60%),
+      radial-gradient(ellipse at bottom, rgba(19,136,8,0.08), transparent 60%),
+      var(--brown);
+    font-family:'Poppins', sans-serif;
+    color: var(--white);
+    padding: 48px 20px 80px;
+  }
+
+  .flag-strip{
+    position:fixed;
+    top:0; left:0; right:0;
+    height:6px;
+    background: linear-gradient(90deg, var(--saffron) 0 33%, var(--white) 33% 66%, var(--green) 66% 100%);
+    z-index: 10;
+  }
+
+  header{
+    max-width: 900px;
+    margin: 20px auto 8px;
+    display:flex;
+    align-items:center;
+    gap: 20px;
+  }
+
+  .bar{
+    width:6px;
+    align-self:stretch;
+    min-height: 60px;
+    background: var(--chakra-blue);
+    border-radius: 3px;
+  }
+
+  h1{
+    font-family:'Playfair Display', serif;
+    font-weight: 900;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    margin: 0;
+    color: var(--white);
+    letter-spacing: 0.5px;
+  }
+
+  .note{
+    max-width: 900px;
+    margin: 18px auto 44px;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: #e9dfce;
+    padding-left: 26px;
+  }
+  .note b{ color: var(--white); }
+  .note .highlight{
+    text-decoration: underline;
+    text-decoration-color: var(--saffron);
+    font-weight: 600;
+    color: var(--saffron);
+  }
+
+  .grid{
+    max-width: 900px;
+    margin: 0 auto;
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 32px;
+  }
+  @media (max-width: 640px){
+    .grid{ grid-template-columns: 1fr; }
+    header{ margin-left: 4px; }
+  }
+
+  .box{
+    border-radius: 18px;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--saffron), var(--white) 45%, var(--white) 55%, var(--green));
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .box:hover{
+    transform: translateY(-4px);
+    box-shadow: 0 16px 36px rgba(0,0,0,0.45);
+  }
+  @media (prefers-reduced-motion: reduce){
+    .box{ transition: none; }
+    .box:hover{ transform: none; }
+  }
+
+  .card{
+    background: #fffdf8;
+    border: 2px solid var(--brown-deep);
+    border-radius: 12px;
+    padding: 20px;
+    min-height: 130px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+  }
+
+  .card p{
+    margin:0;
+    color: var(--brown-deep);
+    font-size: 1.05rem;
+    font-weight: 500;
+    line-height: 1.45;
+  }
+
+  .redeem-row{
+    margin-top: 14px;
+    display:flex;
+    gap: 8px;
+  }
+
+  .redeem-row input{
+    flex:1;
+    min-width: 0;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: none;
+    font-family:'Poppins', sans-serif;
+    font-size: 0.95rem;
+    background: #efe6d6;
+    color: var(--brown-deep);
+    outline-offset: 2px;
+  }
+  .redeem-row input:focus-visible{
+    outline: 3px solid var(--chakra-blue);
+  }
+  .redeem-row input::placeholder{ color: #8a7a63; }
+
+  .redeem-row button{
+    padding: 12px 18px;
+    border: none;
+    border-radius: 8px;
+    background: var(--chakra-blue);
+    color: var(--white);
+    font-weight: 600;
+    cursor: pointer;
+    font-family:'Poppins', sans-serif;
+    transition: background 0.15s ease;
+  }
+  .redeem-row button:hover{ background: #24397e; }
+  .redeem-row button:focus-visible{ outline: 3px solid var(--saffron); outline-offset: 2px; }
+  .redeem-row button:disabled{
+    background: #8a8a8a;
+    cursor: not-allowed;
+  }
+
+  .status{
+    margin-top: 10px;
+    min-height: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-align: center;
+  }
+  .status.wrong{ color: var(--wrong-red); }
+  .status.claimed{ color: var(--claimed-green); }
+
+  .box.is-claimed .card{
+    border-color: var(--claimed-green);
+  }
+
+  footer{
+    max-width: 900px;
+    margin: 60px auto 0;
+    border-top: 2px solid var(--saffron);
+  }
+</style>
+</head>
+<body>
+
+<div class="flag-strip"></div>
+
+<header>
+  <div class="bar"></div>
+  <h1>Independence Day Event</h1>
+</header>
+
+<p class="note">
+  <b>Note:-</b> if you complete an offer, message <span class="highlight">"lambos"</span> to claim a random gift.
+</p>
+
+<div class="grid">
+
+  <div class="box" data-code="BIG7">
+    <div class="card">
+      <p>Type "hi" in the chat and claim code of random gift.</p>
+    </div>
+    <div class="redeem-row">
+      <input type="text" placeholder="type code here" aria-label="Enter code for gift 1">
+      <button type="button">Claim</button>
+    </div>
+    <div class="status" role="status"></div>
+  </div>
+
+  <div class="box" data-code="RUBBERBAND">
+    <div class="card">
+      <p>Private message a tenor (.gif) of rickroll to Lambos.</p>
+    </div>
+    <div class="redeem-row">
+      <input type="text" placeholder="type code here" aria-label="Enter code for gift 2">
+      <button type="button">Claim</button>
+    </div>
+    <div class="status" role="status"></div>
+  </div>
+
+  <div class="box" data-code="LEGENDS">
+    <div class="card">
+      <p>Message "BLOXGANG INDEPENDENT" in chat and claim 4 BLOXCOINS.</p>
+    </div>
+    <div class="redeem-row">
+      <input type="text" placeholder="type code here" aria-label="Enter code for gift 3">
+      <button type="button">Claim</button>
+    </div>
+    <div class="status" role="status"></div>
+  </div>
+
+  <div class="box" data-code="900595">
+    <div class="card">
+      <p>Play any online game with the gang and claim.</p>
+    </div>
+    <div class="redeem-row">
+      <input type="text" placeholder="type code here" aria-label="Enter code for gift 4">
+      <button type="button">Claim</button>
+    </div>
+    <div class="status" role="status"></div>
+  </div>
+
+</div>
+
+<footer></footer>
+
+<script>
+  document.querySelectorAll('.box').forEach(function(box){
+    var correctCode = box.getAttribute('data-code').trim().toUpperCase();
+    var input = box.querySelector('input');
+    var button = box.querySelector('button');
+    var status = box.querySelector('.status');
+    var claimed = false;
+
+    function attemptClaim(){
+      if (claimed) return;
+      var entered = input.value.trim().toUpperCase();
+
+      if (entered.length === 0){
+        status.textContent = 'Enter a code first';
+        status.className = 'status wrong';
+        return;
+      }
+
+      if (entered === correctCode){
+        claimed = true;
+        status.textContent = 'claimed';
+        status.className = 'status claimed';
+        input.disabled = true;
+        button.disabled = true;
+        box.classList.add('is-claimed');
+      } else {
+        status.textContent = 'wrong';
+        status.className = 'status wrong';
+      }
+    }
+
+    button.addEventListener('click', attemptClaim);
+    input.addEventListener('keydown', function(e){
+      if (e.key === 'Enter') attemptClaim();
+    });
+  });
+</script>
+
+</body>
+</html>
